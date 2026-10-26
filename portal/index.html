@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Health Streak — Admin Portal</title>
   <meta name="robots" content="noindex, nofollow, noarchive">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="../assets/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -97,7 +101,7 @@
       border: 1.5px solid rgba(27, 43, 36, 0.15);
       border-radius: 10px;
       text-align: center;
-      letter-spacing: 4px;
+      letter-spacing: 1.5px;
       margin-bottom: 16px;
       outline: none;
       transition: border-color 0.2s;
@@ -577,10 +581,10 @@
     <div class="lock-card">
       <div class="lock-logo">🔒</div>
       <h2 class="lock-title">Health Streak Admin</h2>
-      <p class="lock-subtitle">Enter your admin passcode to manage website testimonials</p>
-      <input type="password" class="lock-input" id="passcodeInput" placeholder="•••••" maxlength="8" autofocus>
+      <p class="lock-subtitle">Enter your admin password to manage website testimonials</p>
+      <input type="password" class="lock-input" id="passcodeInput" placeholder="Enter password" autofocus>
       <button class="btn btn-primary lock-btn" id="unlockBtn">Unlock Portal</button>
-      <p class="lock-error" id="lockError">Incorrect passcode. Please try again.</p>
+      <p class="lock-error" id="lockError">Incorrect password. Please try again.</p>
     </div>
   </div>
 
@@ -708,8 +712,8 @@
       path: 'data/testimonials.json',
       // Access Token
       token: localStorage.getItem('hs_gh_token') || ['ghp', '_', 'ZHpvmLp0dzs', 'Hc0c9qjcy1L8', 'NKAXIiy2gTadC'].join(''),
-      // Passcode for portal access (matching business number 85912)
-      masterPin: '85912'
+      // Password for portal access
+      masterPin: 'siriusblack'
     };
 
     let testimonials = [];
@@ -747,7 +751,7 @@
     const statusMessage = document.getElementById('statusMessage');
     const toast = document.getElementById('toast');
 
-    // 1. Passcode Authentication
+    // 1. Password Authentication
     function checkAuth() {
       const savedAuth = sessionStorage.getItem('hs_admin_auth');
       if (savedAuth === 'true') {
@@ -759,8 +763,8 @@
     }
 
     unlockBtn.addEventListener('click', () => {
-      const pin = passcodeInput.value.trim();
-      if (pin === CONFIG.masterPin) {
+      const enteredPassword = passcodeInput.value.trim().toLowerCase();
+      if (enteredPassword === CONFIG.masterPin.toLowerCase()) {
         sessionStorage.setItem('hs_admin_auth', 'true');
         lockScreen.style.display = 'none';
         initPortal();
