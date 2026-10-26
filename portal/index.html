@@ -859,6 +859,10 @@
           currentSha = data.sha;
           const decoded = decodeURIComponent(escape(atob(data.content)));
           testimonials = JSON.parse(decoded);
+          try {
+            localStorage.setItem('hs_cached_testimonials', JSON.stringify(testimonials));
+            localStorage.setItem('hs_cached_testimonials_time', Date.now().toString());
+          } catch(e) {}
           renderList();
           markClean();
           showToast('Loaded latest testimonials successfully');
@@ -946,6 +950,10 @@
           const resData = await res.json();
           currentSha = resData.content.sha;
           markClean();
+          try {
+            localStorage.setItem('hs_cached_testimonials', JSON.stringify(testimonials));
+            localStorage.setItem('hs_cached_testimonials_time', Date.now().toString());
+          } catch(e) {}
           showToast('🎉 Published to healthstreak.in successfully!');
         } else {
           const errData = await res.json();
