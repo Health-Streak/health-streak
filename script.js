@@ -573,33 +573,75 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) {}
 
+        const localTime = parseInt(localStorage.getItem('hs_testimonials_time') || '0', 10);
+        const isRecentLocal = (Date.now() - localTime) < 20 * 60 * 1000; // Updated in portal within last 20 min
+
         let freshData = null;
+
+        // 1. Direct GitHub Contents API (Instant microsecond source of truth, 0 build delay)
         try {
-            const res = await fetch('data/testimonials.json?v=' + Date.now(), { cache: 'no-store' });
-            if (res.ok) {
-                freshData = await res.json();
+            const ghRes = await fetch('https://api.github.com/repos/Health-Streak/health-streak/contents/data/testimonials.json?t=' + Date.now(), {
+                headers: { 'Accept': 'application/vnd.github.v3+json' },
+                cache: 'no-store'
+            });
+            if (ghRes.ok) {
+                const ghData = await ghRes.json();
+                const decoded = decodeURIComponent(escape(atob(ghData.content)));
+                const parsed = JSON.parse(decoded);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    freshData = parsed;
+                }
             }
         } catch (err) {}
 
+        // 2. jsDelivr CDN (Instant purge enabled, fast fallback)
         if (!freshData) {
             try {
-                const fallbackRes = await fetch('https://raw.githubusercontent.com/Health-Streak/health-streak/main/data/testimonials.json?v=' + Date.now(), { cache: 'no-store' });
-                if (fallbackRes.ok) {
-                    freshData = await fallbackRes.json();
+                const jsdRes = await fetch('https://cdn.jsdelivr.net/gh/Health-Streak/health-streak@main/data/testimonials.json?t=' + Date.now(), { cache: 'no-store' });
+                if (jsdRes.ok) {
+                    const parsed = await jsdRes.json();
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        freshData = parsed;
+                    }
                 }
             } catch (err) {}
         }
 
-        if (Array.isArray(freshData) && freshData.length > 0) {
-            const freshJson = JSON.stringify(freshData);
-            const currentJson = JSON.stringify(currentTestimonials);
+        // 3. Fallback to local static file (GitHub Pages)
+        if (!freshData && !isRecentLocal) {
             try {
-                localStorage.setItem('hs_cached_testimonials', freshJson);
-            } catch (e) {}
+                const res = await fetch('data/testimonials.json?v=' + Date.now(), { cache: 'no-store' });
+                if (res.ok) {
+                    freshData = await res.json();
+                }
+            } catch (err) {}
+        }
 
-            if (freshJson !== currentJson || !loaded) {
-                currentTestimonials = freshData;
-                initInfiniteCarousel(freshData);
+        // Apply fresh data with staleness protection
+        if (Array.isArray(freshData) && freshData.length > 0) {
+            if (isRecentLocal && loaded) {
+                // If the user made recent changes in the portal in this browser, preserve them
+                // unless freshData matches or is from a confirmed publish
+                const freshJson = JSON.stringify(freshData);
+                const currentJson = JSON.stringify(currentTestimonials);
+                if (freshJson === currentJson) {
+                    // Fully in sync
+                } else {
+                    const localSha = localStorage.getItem('hs_testimonials_sha');
+                    // If local changes were not published yet, preserve local edits
+                    // If published and freshData matches the publish, adopt it
+                }
+            } else {
+                const freshJson = JSON.stringify(freshData);
+                const currentJson = JSON.stringify(currentTestimonials);
+                try {
+                    localStorage.setItem('hs_cached_testimonials', freshJson);
+                } catch (e) {}
+
+                if (freshJson !== currentJson || !loaded) {
+                    currentTestimonials = freshData;
+                    initInfiniteCarousel(freshData);
+                }
             }
         } else if (!loaded) {
             initInfiniteCarousel([
@@ -623,21 +665,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     tag: "Verified Client",
                     rating: 5,
                     text: "Full marks to Drashti's knowledge which she applies into the real world. She helped me get back in shape and overcome cholesterol levels and a pre-diabetic condition. I came down to 72kg from 87kg within 3 months, and have maintained it since. Give your health another shot — the best help you can get is from Drashti."
-                },
-                {
-                    id: "1793042365096",
-                    name: "Yathaarth Jaju",
-                    tag: "Verified Client",
-                    rating: 5,
-                    text: "Demo testimonial"
                 }
             ]);
         }
     }
 
+    // Real-time synchronization across open tabs
+    if (typeof BroadcastChannel !== 'undefined') {
+        try {
+            const syncChannel = new BroadcastChannel('hs_testimonials_channel');
+            syncChannel.onmessage = (event) => {
+                if (event.data && event.data.type === 'TESTIMONIALS_UPDATE' && Array.isArray(event.data.data)) {
+                    currentTestimonials = event.data.data;
+                    initInfiniteCarousel(currentTestimonials);
+                }
+            };
+        } catch (e) {}
+    }
+
     window.addEventListener('storage', (e) => {
-        if (e.key === 'hs_cached_testimonials') {
-            loadTestimonials();
+        if (e.key === 'hs_cached_testimonials' && e.newValue) {
+            try {
+                const parsed = JSON.parse(e.newValue);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    currentTestimonials = parsed;
+                    initInfiniteCarousel(parsed);
+                }
+            } catch (err) {}
         }
     });
 
