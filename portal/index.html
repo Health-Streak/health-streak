@@ -1019,10 +1019,7 @@
           currentSha = data.sha;
           const decoded = decodeURIComponent(escape(atob(data.content)));
           testimonials = JSON.parse(decoded);
-          try {
-            localStorage.setItem('hs_cached_testimonials', JSON.stringify(testimonials));
-            localStorage.setItem('hs_cached_testimonials_time', Date.now().toString());
-          } catch(e) {}
+          persistLocalState();
           renderList();
           markClean();
           showToast('Loaded latest testimonials successfully');
@@ -1114,10 +1111,11 @@
           const resData = await res.json();
           currentSha = resData.content.sha;
           markClean();
+          persistLocalState();
           try {
-            localStorage.setItem('hs_cached_testimonials', JSON.stringify(testimonials));
-            localStorage.setItem('hs_cached_testimonials_time', Date.now().toString());
-          } catch(e) {}
+            // Trigger instant jsDelivr purge so CDN updates in milliseconds worldwide
+            fetch('https://purge.jsdelivr.net/gh/Health-Streak/health-streak@main/data/testimonials.json', { mode: 'no-cors' });
+          } catch (e) {}
           showToast('🎉 Published to healthstreak.in successfully!');
         } else {
           const errData = await res.json();
@@ -1243,6 +1241,7 @@
       resetForm();
       renderList();
       markDirty();
+      persistLocalState();
     });
 
     function editItem(item) {
@@ -1283,6 +1282,7 @@
         testimonials.splice(index, 1);
         renderList();
         markDirty();
+        persistLocalState();
         showToast('Deleted testimonial');
       }
     }
@@ -1295,6 +1295,22 @@
       testimonials[newIndex] = temp;
       renderList();
       markDirty();
+      persistLocalState();
+    }
+
+    function persistLocalState() {
+      try {
+        const json = JSON.stringify(testimonials);
+        localStorage.setItem('hs_cached_testimonials', json);
+        localStorage.setItem('hs_testimonials_time', Date.now().toString());
+        if (currentSha) {
+          localStorage.setItem('hs_testimonials_sha', currentSha);
+        }
+        if (typeof BroadcastChannel !== 'undefined') {
+          const channel = new BroadcastChannel('hs_testimonials_channel');
+          channel.postMessage({ type: 'TESTIMONIALS_UPDATE', data: testimonials, time: Date.now() });
+        }
+      } catch (e) {}
     }
 
     function markDirty() {
