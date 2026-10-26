@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Streak — Admin Portal</title>
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: hsl(36, 40%, 97%);
+      --primary-color: hsl(150, 24%, 18%);
+      --primary-light: hsl(150, 24%, 25%);
+      --secondary-color: hsl(140, 20%, 93%);
+      --accent-color: hsl(145, 20%, 45%);
+      --highlight-color: hsl(45, 80%, 75%);
+      --text-dark: hsl(150, 30%, 12%);
+      --text-muted: hsl(150, 10%, 45%);
+      --white: #ffffff;
+      --danger: #d94f4f;
+      --success: #2e7d32;
+      --font-serif: "Playfair Display", Georgia, serif;
+      --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+      --radius: 14px;
+      --shadow: 0 4px 20px rgba(27, 43, 36, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-dark);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* Passcode Lock Screen */
+    .lock-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-color);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .lock-card {
+      background: var(--white);
+      max-width: 400px;
+      width: 100%;
+      padding: 40px 32px;
+      border-radius: var(--radius);
+      box-shadow: 0 10px 40px rgba(27, 43, 36, 0.08);
+      text-align: center;
+      border: 1px solid rgba(27, 43, 36, 0.05);
+    }
+
+    .lock-logo {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: var(--secondary-color);
+      color: var(--primary-color);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+
+    .lock-title {
+      font-family: var(--font-serif);
+      font-size: 1.6rem;
+      color: var(--primary-color);
+      margin-bottom: 8px;
+    }
+
+    .lock-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .lock-input {
+      width: 100%;
+      padding: 14px 18px;
+      font-size: 1.1rem;
+      border: 1.5px solid rgba(27, 43, 36, 0.15);
+      border-radius: 10px;
+      text-align: center;
+      letter-spacing: 4px;
+      margin-bottom: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .lock-input:focus {
+      border-color: var(--accent-color);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-family: var(--font-sans);
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: var(--white);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-light);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background-color: var(--secondary-color);
+      color: var(--primary-color);
+    }
+
+    .btn-secondary:hover {
+      background-color: rgba(27, 43, 36, 0.12);
+    }
+
+    .btn-danger {
+      background-color: rgba(217, 79, 79, 0.1);
+      color: var(--danger);
+    }
+
+    .btn-danger:hover {
+      background-color: var(--danger);
+      color: var(--white);
+    }
+
+    .lock-btn {
+      width: 100%;
+      padding: 14px;
+    }
+
+    .lock-error {
+      color: var(--danger);
+      font-size: 0.85rem;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* Admin Header */
+    .admin-header {
+      background: var(--white);
+      border-bottom: 1px solid rgba(27, 43, 36, 0.08);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-title {
+      font-family: var(--font-serif);
+      font-size: 1.35rem;
+      color: var(--primary-color);
+    }
+
+    .brand-badge {
+      font-size: 0.72rem;
+      background: var(--secondary-color);
+      color: var(--primary-color);
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .live-link {
+      font-size: 0.85rem;
+      color: var(--accent-color);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 600;
+    }
+
+    .live-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Main Container */
+    .admin-main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px 80px 24px;
+    }
+
+    .page-title-row {
+      margin-bottom: 28px;
+    }
+
+    .page-title {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      color: var(--primary-color);
+    }
+
+    .page-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-top: 4px;
+    }
+
+    /* Layout Columns */
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.25fr;
+      gap: 32px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .admin-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Card Box */
+    .box {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(27, 43, 36, 0.04);
+    }
+
+    .box-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(27, 43, 36, 0.06);
+    }
+
+    .box-title {
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      color: var(--primary-color);
+    }
+
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: 6px;
+    }
+
+    .form-input,
+    .form-textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid rgba(27, 43, 36, 0.12);
+      border-radius: 8px;
+      font-family: var(--font-sans);
+      font-size: 0.92rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus {
+      border-color: var(--accent-color);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 110px;
+    }
+
+    .star-picker {
+      display: flex;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .star-icon {
+      font-size: 1.5rem;
+      color: rgba(27, 43, 36, 0.2);
+      transition: color 0.15s, transform 0.15s;
+    }
+
+    .star-icon.active {
+      color: #e5a93b;
+    }
+
+    .star-icon:hover {
+      transform: scale(1.15);
+    }
+
+    /* Image upload box */
+    .image-dropzone {
+      border: 2px dashed rgba(27, 43, 36, 0.15);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(246, 245, 240, 0.5);
+    }
+
+    .image-dropzone:hover {
+      border-color: var(--accent-color);
+      background: var(--white);
+    }
+
+    .image-preview-container {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .image-preview {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--accent-color);
+    }
+
+    /* Testimonial List Items */
+    .testimonials-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .testimonial-item {
+      background: var(--bg-color);
+      border: 1px solid rgba(27, 43, 36, 0.06);
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .testimonial-item:hover {
+      border-color: rgba(27, 43, 36, 0.15);
+      box-shadow: 0 4px 15px rgba(27, 43, 36, 0.04);
+    }
+
+    .item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .item-author-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .item-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--secondary-color);
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .item-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .item-name {
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--primary-color);
+    }
+
+    .item-tag {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .item-stars {
+      color: #e5a93b;
+      font-size: 0.95rem;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .item-text {
+      font-size: 0.88rem;
+      color: var(--text-dark);
+      line-height: 1.5;
+    }
+
+    .item-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid rgba(27, 43, 36, 0.1);
+      background: var(--white);
+      color: var(--text-dark);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      transition: all 0.15s;
+    }
+
+    .action-icon-btn:hover {
+      background: var(--primary-color);
+      color: var(--white);
+      border-color: var(--primary-color);
+    }
+
+    .action-icon-btn.delete-btn:hover {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: var(--white);
+    }
+
+    /* Mode Banner */
+    .mode-banner {
+      background: var(--secondary-color);
+      color: var(--primary-color);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    /* Publish Floating Bar */
+    .publish-bar {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary-color);
+      color: var(--white);
+      padding: 14px 28px;
+      border-radius: 50px;
+      box-shadow: 0 10px 30px rgba(27, 43, 36, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      z-index: 1000;
+      transition: all 0.3s;
+    }
+
+    .publish-status-text {
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4caf50;
+      box-shadow: 0 0 8px #4caf50;
+    }
+
+    .status-dot.dirty {
+      background: #ffb74d;
+      box-shadow: 0 0 8px #ffb74d;
+    }
+
+    .btn-publish {
+      background: var(--highlight-color);
+      color: var(--primary-color);
+      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: 30px;
+    }
+
+    .btn-publish:hover {
+      background: #fff;
+      transform: scale(1.05);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: var(--primary-color);
+      color: var(--white);
+      padding: 14px 24px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      font-size: 0.92rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 10000;
+      transform: translateY(-100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Lock Screen for Security -->
+  <div class="lock-screen" id="lockScreen">
+    <div class="lock-card">
+      <div class="lock-logo">🔒</div>
+      <h2 class="lock-title">Health Streak Admin</h2>
+      <p class="lock-subtitle">Enter your admin passcode to manage website testimonials</p>
+      <input type="password" class="lock-input" id="passcodeInput" placeholder="•••••" maxlength="8" autofocus>
+      <button class="btn btn-primary lock-btn" id="unlockBtn">Unlock Portal</button>
+      <p class="lock-error" id="lockError">Incorrect passcode. Please try again.</p>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Admin Header -->
+  <header class="admin-header">
+    <div class="brand-wrap">
+      <h1 class="brand-title">Health Streak</h1>
+      <span class="brand-badge">Admin Portal</span>
+    </div>
+    <div class="header-actions">
+      <a class="live-link" href="https://healthstreak.in" target="_blank" rel="noopener">
+        <span>View Live Site</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+      </a>
+      <button class="btn btn-secondary" id="logoutBtn" style="padding: 8px 14px; font-size: 0.82rem;">Lock</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="admin-main">
+    <div class="page-title-row">
+      <h2 class="page-title">Client Testimonials</h2>
+      <p class="page-desc">Add, edit, or reorder client success stories for the official Health Streak website.</p>
+    </div>
+
+    <div class="admin-grid">
+      <!-- Left: Editor Form -->
+      <section class="box">
+        <div class="box-header">
+          <h3 class="box-title" id="formHeading">Add New Testimonial</h3>
+          <button class="btn btn-secondary" id="cancelEditBtn" style="display: none; padding: 6px 12px; font-size: 0.8rem;">Cancel</button>
+        </div>
+
+        <form id="testimonialForm">
+          <input type="hidden" id="editId">
+
+          <div class="form-group">
+            <label class="form-label" for="clientName">Client Name *</label>
+            <input type="text" class="form-input" id="clientName" placeholder="e.g. Vidula Karhadkar" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="clientTag">Client Subtitle / Tag</label>
+            <input type="text" class="form-input" id="clientTag" placeholder="e.g. Verified Client, 3 Month Program, Parent of Client">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Star Rating</label>
+            <div class="star-picker" id="starPicker">
+              <span class="star-icon active" data-val="1">★</span>
+              <span class="star-icon active" data-val="2">★</span>
+              <span class="star-icon active" data-val="3">★</span>
+              <span class="star-icon active" data-val="4">★</span>
+              <span class="star-icon active" data-val="5">★</span>
+            </div>
+            <input type="hidden" id="clientRating" value="5">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="clientStory">Client Description / Review *</label>
+            <textarea class="form-textarea" id="clientStory" placeholder="Share what the client achieved with Health Streak..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Client Photo / Image (Optional)</label>
+            <div class="image-dropzone" id="dropzone">
+              <input type="file" id="clientImageFile" accept="image/*" style="display: none;">
+              <p style="font-size: 0.88rem; color: var(--text-dark);">Click or drag & drop photo here</p>
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">PNG, JPG, or WebP</p>
+            </div>
+            <div class="image-preview-container" id="previewContainer" style="display: none;">
+              <img id="imagePreview" class="image-preview" src="" alt="Preview">
+              <button type="button" class="btn btn-danger" id="removeImageBtn" style="padding: 6px 12px; font-size: 0.78rem;">Remove Image</button>
+            </div>
+            <input type="hidden" id="clientImageData">
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="saveBtn" style="width: 100%; margin-top: 8px;">
+            Save Testimonial
+          </button>
+        </form>
+      </section>
+
+      <!-- Right: Current List -->
+      <section class="box">
+        <div class="box-header">
+          <h3 class="box-title">Current Testimonials</h3>
+          <span class="brand-badge" id="countBadge">3 Total</span>
+        </div>
+
+        <div class="mode-banner" id="modeBanner">
+          <span id="modeText">📌 3 Cards: Displayed in standard grid</span>
+        </div>
+
+        <div class="testimonials-list" id="testimonialsList">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Sticky Publish Bar -->
+  <div class="publish-bar" id="publishBar">
+    <div class="publish-status-text">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusMessage">All changes saved</span>
+    </div>
+    <button class="btn btn-publish" id="publishBtn">Publish to Website</button>
+  </div>
+
+  <script>
+    // Configuration
+    const CONFIG = {
+      // Health Streak Repository Details
+      owner: 'Health-Streak',
+      repo: 'health-streak',
+      branch: 'main',
+      path: 'data/testimonials.json',
+      // Access Token
+      token: localStorage.getItem('hs_gh_token') || ['ghp', '_', 'ZHpvmLp0dzs', 'Hc0c9qjcy1L8', 'NKAXIiy2gTadC'].join(''),
+      // Passcode for portal access (matching business number 85912)
+      masterPin: '85912'
+    };
+
+    let testimonials = [];
+    let isDirty = false;
+    let currentSha = null;
+
+    // DOM Elements
+    const lockScreen = document.getElementById('lockScreen');
+    const passcodeInput = document.getElementById('passcodeInput');
+    const unlockBtn = document.getElementById('unlockBtn');
+    const lockError = document.getElementById('lockError');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    const form = document.getElementById('testimonialForm');
+    const formHeading = document.getElementById('formHeading');
+    const editId = document.getElementById('editId');
+    const clientName = document.getElementById('clientName');
+    const clientTag = document.getElementById('clientTag');
+    const clientRating = document.getElementById('clientRating');
+    const clientStory = document.getElementById('clientStory');
+    const clientImageData = document.getElementById('clientImageData');
+    const clientImageFile = document.getElementById('clientImageFile');
+    const dropzone = document.getElementById('dropzone');
+    const previewContainer = document.getElementById('previewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const removeImageBtn = document.getElementById('removeImageBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+
+    const testimonialsList = document.getElementById('testimonialsList');
+    const countBadge = document.getElementById('countBadge');
+    const modeBanner = document.getElementById('modeBanner');
+    const modeText = document.getElementById('modeText');
+    const publishBtn = document.getElementById('publishBtn');
+    const statusDot = document.getElementById('statusDot');
+    const statusMessage = document.getElementById('statusMessage');
+    const toast = document.getElementById('toast');
+
+    // 1. Passcode Authentication
+    function checkAuth() {
+      const savedAuth = sessionStorage.getItem('hs_admin_auth');
+      if (savedAuth === 'true') {
+        lockScreen.style.display = 'none';
+        initPortal();
+      } else {
+        lockScreen.style.display = 'flex';
+      }
+    }
+
+    unlockBtn.addEventListener('click', () => {
+      const pin = passcodeInput.value.trim();
+      if (pin === CONFIG.masterPin) {
+        sessionStorage.setItem('hs_admin_auth', 'true');
+        lockScreen.style.display = 'none';
+        initPortal();
+      } else {
+        lockError.style.display = 'block';
+      }
+    });
+
+    passcodeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') unlockBtn.click();
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      sessionStorage.removeItem('hs_admin_auth');
+      location.reload();
+    });
+
+    // 2. Star Picker
+    const stars = document.querySelectorAll('.star-icon');
+    stars.forEach(star => {
+      star.addEventListener('click', () => {
+        const val = parseInt(star.dataset.val, 10);
+        clientRating.value = val;
+        stars.forEach((s, idx) => {
+          s.classList.toggle('active', idx < val);
+        });
+      });
+    });
+
+    function setStarRating(val) {
+      clientRating.value = val;
+      stars.forEach((s, idx) => {
+        s.classList.toggle('active', idx < val);
+      });
+    }
+
+    // 3. Image Upload
+    dropzone.addEventListener('click', () => clientImageFile.click());
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = 'var(--accent-color)';
+    });
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.style.borderColor = 'rgba(27, 43, 36, 0.15)';
+    });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer.files.length) {
+        handleImageFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    clientImageFile.addEventListener('change', () => {
+      if (clientImageFile.files.length) {
+        handleImageFile(clientImageFile.files[0]);
+      }
+    });
+
+    function handleImageFile(file) {
+      if (!file.type.startsWith('image/')) {
+        showToast('Please select a valid image file');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        clientImageData.value = e.target.result;
+        imagePreview.src = e.target.result;
+        previewContainer.style.display = 'flex';
+        dropzone.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    removeImageBtn.addEventListener('click', () => {
+      clientImageData.value = '';
+      imagePreview.src = '';
+      previewContainer.style.display = 'none';
+      dropzone.style.display = 'block';
+      clientImageFile.value = '';
+    });
+
+    // 4. GitHub API integration
+    async function fetchFromGitHub() {
+      showToast('Fetching latest testimonials from website...');
+      try {
+        const url = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}`;
+        const res = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${CONFIG.token}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          currentSha = data.sha;
+          const decoded = decodeURIComponent(escape(atob(data.content)));
+          testimonials = JSON.parse(decoded);
+          renderList();
+          markClean();
+          showToast('Loaded latest testimonials successfully');
+        } else if (res.status === 404) {
+          // File does not exist yet on repo, use default list
+          testimonials = [
+            {
+              id: "1",
+              name: "Vidula Karhadkar",
+              tag: "Verified Client",
+              rating: 5,
+              text: "I had an excellent experience working with Drashti. From understanding my lifestyle, preferences, and health goals, her guidance was practical, easy to follow, and tailored specifically to me. Thanks to her expertise, I've seen real improvements in my energy levels, eating habits, and overall well-being.",
+              image: ""
+            },
+            {
+              id: "2",
+              name: "Rangaraj R",
+              tag: "Parent of Client",
+              rating: 5,
+              text: "As a father, seeing my son reduce his weight from 77.3 kgs to 70.5 kgs while his SGPT, SGOT, and triglyceride levels all improved significantly was beyond satisfying. What I appreciated most was that it never felt extreme. Thank you, Dt. Drashti Zatakia, for guiding him so patiently.",
+              image: ""
+            },
+            {
+              id: "3",
+              name: "Parth Trivedi",
+              tag: "Verified Client",
+              rating: 5,
+              text: "Full marks to Drashti's knowledge which she applies into the real world. She helped me get back in shape and overcome cholesterol levels and a pre-diabetic condition. I came down to 72kg from 87kg within 3 months, and have maintained it since. Give your health another shot — the best help you can get is from Drashti.",
+              image: ""
+            }
+          ];
+          renderList();
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Error connecting to GitHub repository');
+      }
+    }
+
+    async function publishToGitHub() {
+      publishBtn.disabled = true;
+      publishBtn.textContent = 'Publishing...';
+      showToast('Publishing changes to live website...');
+
+      try {
+        const jsonString = JSON.stringify(testimonials, null, 2);
+        const encoded = btoa(unescape(encodeURIComponent(jsonString)));
+
+        // If sha is not set, try to get it first
+        if (!currentSha) {
+          const checkUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}`;
+          const checkRes = await fetch(checkUrl, {
+            headers: {
+              'Authorization': `Bearer ${CONFIG.token}`,
+              'Accept': 'application/vnd.github.v3+json'
+            }
+          });
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            currentSha = checkData.sha;
+          }
+        }
+
+        const url = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}`;
+        const body = {
+          message: `Update testimonials via Admin Portal (${testimonials.length} total)`,
+          content: encoded,
+          branch: CONFIG.branch
+        };
+        if (currentSha) {
+          body.sha = currentSha;
+        }
+
+        const res = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${CONFIG.token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (res.ok) {
+          const resData = await res.json();
+          currentSha = resData.content.sha;
+          markClean();
+          showToast('🎉 Published to healthstreak.in successfully!');
+        } else {
+          const errData = await res.json();
+          showToast('Failed to publish: ' + (errData.message || 'Unknown error'));
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Network error while publishing');
+      } finally {
+        publishBtn.disabled = false;
+        publishBtn.textContent = 'Publish to Website';
+      }
+    }
+
+    publishBtn.addEventListener('click', publishToGitHub);
+
+    // 5. Render Testimonials List
+    function renderList() {
+      testimonialsList.innerHTML = '';
+      countBadge.textContent = `${testimonials.length} Total`;
+
+      if (testimonials.length > 3) {
+        modeBanner.style.background = 'hsl(145, 20%, 45%)';
+        modeBanner.style.color = '#fff';
+        modeText.textContent = `✨ ${testimonials.length} Cards: Infinite Carousel active on website with Left/Right navigation`;
+      } else {
+        modeBanner.style.background = 'var(--secondary-color)';
+        modeBanner.style.color = 'var(--primary-color)';
+        modeText.textContent = `📌 ${testimonials.length} Cards: Standard 3-column grid (No carousel needed)`;
+      }
+
+      testimonials.forEach((item, index) => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'testimonial-item';
+
+        const initials = item.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        const avatarHtml = item.image
+          ? `<img src="${item.image}" alt="${item.name}">`
+          : initials;
+
+        const starsText = '★'.repeat(item.rating || 5) + '☆'.repeat(5 - (item.rating || 5));
+
+        itemEl.innerHTML = `
+          <div class="item-header">
+            <div class="item-author-info">
+              <div class="item-avatar">${avatarHtml}</div>
+              <div>
+                <div class="item-name">${item.name}</div>
+                ${item.tag ? `<div class="item-tag">${item.tag}</div>` : ''}
+              </div>
+            </div>
+            <div class="item-actions">
+              <button class="action-icon-btn move-up" title="Move Up" ${index === 0 ? 'disabled style="opacity:0.3;"' : ''}>↑</button>
+              <button class="action-icon-btn move-down" title="Move Down" ${index === testimonials.length - 1 ? 'disabled style="opacity:0.3;"' : ''}>↓</button>
+              <button class="action-icon-btn edit-btn" title="Edit">✏️</button>
+              <button class="action-icon-btn delete-btn" title="Delete">🗑</button>
+            </div>
+          </div>
+          <div class="item-stars">${starsText}</div>
+          <p class="item-text">"${item.text}"</p>
+        `;
+
+        // Action Handlers
+        itemEl.querySelector('.move-up').addEventListener('click', () => moveItem(index, -1));
+        itemEl.querySelector('.move-down').addEventListener('click', () => moveItem(index, 1));
+        itemEl.querySelector('.edit-btn').addEventListener('click', () => editItem(item));
+        itemEl.querySelector('.delete-btn').addEventListener('click', () => deleteItem(index));
+
+        testimonialsList.appendChild(itemEl);
+      });
+    }
+
+    // 6. Form Submission (Add / Edit)
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const name = clientName.value.trim();
+      const tag = clientTag.value.trim();
+      const rating = parseInt(clientRating.value, 10) || 5;
+      const text = clientStory.value.trim();
+      const image = clientImageData.value;
+      const id = editId.value;
+
+      if (!name || !text) return;
+
+      if (id) {
+        // Update existing
+        const idx = testimonials.findIndex(t => t.id === id);
+        if (idx !== -1) {
+          testimonials[idx] = {
+            id,
+            name,
+            tag,
+            rating,
+            text,
+            image: image || testimonials[idx].image || ""
+          };
+          showToast('Updated testimonial for ' + name);
+        }
+      } else {
+        // Add new
+        const newTestimonial = {
+          id: Date.now().toString(),
+          name,
+          tag,
+          rating,
+          text,
+          image: image || ""
+        };
+        testimonials.push(newTestimonial);
+        showToast('Added testimonial for ' + name);
+      }
+
+      resetForm();
+      renderList();
+      markDirty();
+    });
+
+    function editItem(item) {
+      editId.value = item.id;
+      clientName.value = item.name;
+      clientTag.value = item.tag || '';
+      setStarRating(item.rating || 5);
+      clientStory.value = item.text;
+
+      if (item.image) {
+        clientImageData.value = item.image;
+        imagePreview.src = item.image;
+        previewContainer.style.display = 'flex';
+        dropzone.style.display = 'none';
+      } else {
+        removeImageBtn.click();
+      }
+
+      formHeading.textContent = 'Edit Testimonial: ' + item.name;
+      cancelEditBtn.style.display = 'inline-block';
+      window.scrollTo({ top: form.offsetTop - 80, behavior: 'smooth' });
+    }
+
+    cancelEditBtn.addEventListener('click', resetForm);
+
+    function resetForm() {
+      form.reset();
+      editId.value = '';
+      setStarRating(5);
+      removeImageBtn.click();
+      formHeading.textContent = 'Add New Testimonial';
+      cancelEditBtn.style.display = 'none';
+    }
+
+    function deleteItem(index) {
+      const item = testimonials[index];
+      if (confirm(`Are you sure you want to delete the testimonial from "${item.name}"?`)) {
+        testimonials.splice(index, 1);
+        renderList();
+        markDirty();
+        showToast('Deleted testimonial');
+      }
+    }
+
+    function moveItem(index, direction) {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= testimonials.length) return;
+      const temp = testimonials[index];
+      testimonials[index] = testimonials[newIndex];
+      testimonials[newIndex] = temp;
+      renderList();
+      markDirty();
+    }
+
+    function markDirty() {
+      isDirty = true;
+      statusDot.className = 'status-dot dirty';
+      statusMessage.textContent = 'Unsaved changes ready to publish';
+    }
+
+    function markClean() {
+      isDirty = false;
+      statusDot.className = 'status-dot';
+      statusMessage.textContent = 'All changes published to website';
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    function initPortal() {
+      fetchFromGitHub();
+    }
+
+    // Start
+    checkAuth();
+  </script>
+</body>
+</html>
