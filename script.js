@@ -314,6 +314,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const prevBtn = document.getElementById('prevTestimonial');
     const nextBtn = document.getElementById('nextTestimonial');
     const dotsContainer = document.getElementById('carouselDots');
+    const carouselWrapper = document.querySelector('.testimonials-carousel-wrapper');
+
+    let currentTestimonials = [];
+    let carouselState = {
+        currentIndex: 0,
+        isAnimating: false,
+        autoSlideTimer: null,
+        totalUnique: 0
+    };
 
     function renderStars(rating) {
         const count = Math.max(1, Math.min(5, parseInt(rating, 10) || 5));
@@ -349,152 +358,288 @@ document.addEventListener('DOMContentLoaded', () => {
         return card;
     }
 
-    async function loadTestimonials() {
-        if (!testimonialsGrid) return;
-        try {
-            const res = await fetch('data/testimonials.json?v=' + Date.now());
-            if (!res.ok) return;
-            const testimonials = await res.json();
-            if (!Array.isArray(testimonials) || testimonials.length === 0) return;
-
-            // Clear static cards and render dynamic
-            testimonialsGrid.innerHTML = '';
-            testimonials.forEach(item => {
-                testimonialsGrid.appendChild(createTestimonialCard(item));
-            });
-
-            // If 4 or more testimonials, activate smooth carousel with controls
-            if (testimonials.length > 3) {
-                initTestimonialCarousel(testimonials);
-            } else {
-                testimonialsGrid.classList.remove('is-carousel');
-                testimonialsGrid.style.transform = 'none';
-                if (carouselControls) carouselControls.style.display = 'none';
-            }
-        } catch (err) {
-            // Keep default static fallback cards
-        }
+    function getVisibleCardsCount() {
+        if (window.innerWidth <= 768) return 1;
+        if (window.innerWidth <= 1100) return 2;
+        return 3;
     }
 
-    function initTestimonialCarousel(testimonials) {
-        if (!testimonialsGrid || !carouselControls) return;
+    function resizeCards() {
+        if (!testimonialsGrid || !testimonialsGrid.parentElement) return { cardWidth: 360, gap: 28 };
+        const visibleCount = getVisibleCardsCount();
+        const containerWidth = testimonialsGrid.parentElement.clientWidth;
+        const gap = 28;
+        const cardWidth = Math.floor((containerWidth - (visibleCount - 1) * gap) / visibleCount);
+        
+        const allCards = testimonialsGrid.querySelectorAll('.testimonial-card');
+        allCards.forEach(c => {
+            c.style.flex = `0 0 ${cardWidth}px`;
+            c.style.width = `${cardWidth}px`;
+            c.style.maxWidth = `${cardWidth}px`;
+            c.style.boxSizing = 'border-box';
+        });
 
-        testimonialsGrid.classList.add('is-carousel');
-        carouselControls.style.display = 'flex';
+        return { cardWidth, gap };
+    }
 
-        let currentIndex = 0;
-        let autoSlideTimer = null;
+    function initInfiniteCarousel(testimonials) {
+        if (!testimonialsGrid || !testimonials || testimonials.length === 0) return;
 
-        function getVisibleCardsCount() {
-            if (window.innerWidth <= 768) return 1;
-            if (window.innerWidth <= 1100) return 2;
-            return 3;
+        if (carouselState.autoSlideTimer) {
+            clearInterval(carouselState.autoSlideTimer);
+            carouselState.autoSlideTimer = null;
         }
 
-        function updateCarousel(smooth = true) {
-            const visibleCount = getVisibleCardsCount();
-            const total = testimonials.length;
-            const maxIndex = Math.max(0, total - visibleCount);
+        const N = testimonials.length;
+        carouselState.totalUnique = N;
+        carouselState.currentIndex = 0;
+        carouselState.isAnimating = false;
 
-            if (currentIndex > maxIndex) currentIndex = 0;
-            if (currentIndex < 0) currentIndex = maxIndex;
+        testimonialsGrid.classList.add('is-carousel');
+        if (carouselControls) carouselControls.style.display = 'flex';
 
-            const cards = testimonialsGrid.querySelectorAll('.testimonial-card');
-            if (!cards.length) return;
+        // Clear grid and render unique cards + clones for seamless infinite loop
+        testimonialsGrid.innerHTML = '';
 
-            const cardWidth = cards[0].offsetWidth;
-            const gap = 28;
-            const shift = currentIndex * (cardWidth + gap);
+        let cardsList = [...testimonials];
+        while (cardsList.length < 6 || cardsList.length < N + 3) {
+            cardsList = cardsList.concat(testimonials);
+        }
 
-            testimonialsGrid.style.transition = smooth ? 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)' : 'none';
-            testimonialsGrid.style.transform = `translateX(-${shift}px)`;
+        cardsList.forEach(item => {
+            testimonialsGrid.appendChild(createTestimonialCard(item));
+        });
 
-            // Update dots
-            if (dotsContainer) {
-                dotsContainer.innerHTML = '';
-                const numPages = maxIndex + 1;
-                for (let i = 0; i < numPages; i++) {
-                    const dot = document.createElement('button');
-                    dot.className = 'carousel-dot' + (i === currentIndex ? ' active' : '');
-                    dot.setAttribute('aria-label', `Testimonial slide ${i + 1}`);
-                    dot.addEventListener('click', () => {
-                        currentIndex = i;
-                        updateCarousel();
-                        restartAutoSlide();
-                    });
-                    dotsContainer.appendChild(dot);
-                }
+        resizeCards();
+
+        // Render pagination dots
+        if (dotsContainer) {
+            dotsContainer.innerHTML = '';
+            for (let i = 0; i < N; i++) {
+                const dot = document.createElement('button');
+                dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+                dot.setAttribute('aria-label', `Testimonial slide ${i + 1}`);
+                dot.addEventListener('click', () => {
+                    pauseAutoSlide();
+                    goToIndex(i);
+                    resumeAutoSlide();
+                });
+                dotsContainer.appendChild(dot);
             }
+        }
+
+        function updateDots() {
+            if (!dotsContainer) return;
+            const activeIdx = (carouselState.currentIndex % N + N) % N;
+            const dots = dotsContainer.querySelectorAll('.carousel-dot');
+            dots.forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === activeIdx);
+            });
+        }
+
+        function moveTo(index, smooth = true) {
+            const { cardWidth, gap } = resizeCards();
+            const shift = index * (cardWidth + gap);
+
+            if (smooth) {
+                testimonialsGrid.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.5, 1)';
+                carouselState.isAnimating = true;
+            } else {
+                testimonialsGrid.style.transition = 'none';
+                carouselState.isAnimating = false;
+            }
+
+            testimonialsGrid.style.transform = `translateX(-${shift}px)`;
+            updateDots();
+
+            if (smooth) {
+                setTimeout(() => {
+                    carouselState.isAnimating = false;
+                    if (carouselState.currentIndex >= N) {
+                        testimonialsGrid.style.transition = 'none';
+                        carouselState.currentIndex = 0;
+                        testimonialsGrid.style.transform = 'translateX(0px)';
+                        updateDots();
+                    }
+                }, 820);
+            }
+        }
+
+        function stepNext() {
+            if (carouselState.isAnimating) return;
+            carouselState.currentIndex++;
+            moveTo(carouselState.currentIndex, true);
+        }
+
+        function stepPrev() {
+            if (carouselState.isAnimating) return;
+            if (carouselState.currentIndex <= 0) {
+                testimonialsGrid.style.transition = 'none';
+                carouselState.currentIndex = N;
+                const { cardWidth, gap } = resizeCards();
+                testimonialsGrid.style.transform = `translateX(-${carouselState.currentIndex * (cardWidth + gap)}px)`;
+                void testimonialsGrid.offsetWidth;
+            }
+            carouselState.currentIndex--;
+            moveTo(carouselState.currentIndex, true);
+        }
+
+        function goToIndex(idx) {
+            carouselState.currentIndex = idx;
+            moveTo(carouselState.currentIndex, true);
         }
 
         function startAutoSlide() {
-            stopAutoSlide();
-            autoSlideTimer = setInterval(() => {
-                const visibleCount = getVisibleCardsCount();
-                const maxIndex = Math.max(0, testimonials.length - visibleCount);
-                if (currentIndex >= maxIndex) {
-                    currentIndex = 0;
-                } else {
-                    currentIndex++;
-                }
-                updateCarousel();
-            }, 4500);
+            if (carouselState.autoSlideTimer) clearInterval(carouselState.autoSlideTimer);
+            carouselState.autoSlideTimer = setInterval(() => {
+                stepNext();
+            }, 4000);
         }
 
-        function stopAutoSlide() {
-            if (autoSlideTimer) clearInterval(autoSlideTimer);
+        function pauseAutoSlide() {
+            if (carouselState.autoSlideTimer) {
+                clearInterval(carouselState.autoSlideTimer);
+                carouselState.autoSlideTimer = null;
+            }
         }
 
-        function restartAutoSlide() {
-            stopAutoSlide();
+        function resumeAutoSlide() {
+            pauseAutoSlide();
             startAutoSlide();
         }
 
         if (nextBtn) {
             nextBtn.onclick = () => {
-                const visibleCount = getVisibleCardsCount();
-                const maxIndex = Math.max(0, testimonials.length - visibleCount);
-                currentIndex = (currentIndex >= maxIndex) ? 0 : currentIndex + 1;
-                updateCarousel();
-                restartAutoSlide();
+                pauseAutoSlide();
+                stepNext();
+                resumeAutoSlide();
             };
         }
 
         if (prevBtn) {
             prevBtn.onclick = () => {
-                const visibleCount = getVisibleCardsCount();
-                const maxIndex = Math.max(0, testimonials.length - visibleCount);
-                currentIndex = (currentIndex <= 0) ? maxIndex : currentIndex - 1;
-                updateCarousel();
-                restartAutoSlide();
+                pauseAutoSlide();
+                stepPrev();
+                resumeAutoSlide();
             };
         }
 
+        const hoverTarget = carouselWrapper || testimonialsGrid;
+        hoverTarget.onmouseenter = pauseAutoSlide;
+        hoverTarget.onmouseleave = resumeAutoSlide;
+
         // Mobile touch swipe
         let touchStartX = 0;
-        testimonialsGrid.addEventListener('touchstart', e => {
+        let touchStartY = 0;
+        testimonialsGrid.ontouchstart = (e) => {
             touchStartX = e.touches[0].clientX;
-            stopAutoSlide();
-        }, { passive: true });
+            touchStartY = e.touches[0].clientY;
+            pauseAutoSlide();
+        };
 
-        testimonialsGrid.addEventListener('touchend', e => {
+        testimonialsGrid.ontouchend = (e) => {
             const touchEndX = e.changedTouches[0].clientX;
-            const diff = touchStartX - touchEndX;
-            if (Math.abs(diff) > 40) {
-                if (diff > 0 && nextBtn) nextBtn.click();
-                else if (diff < 0 && prevBtn) prevBtn.click();
+            const touchEndY = e.changedTouches[0].clientY;
+            const diffX = touchStartX - touchEndX;
+            const diffY = touchStartY - touchEndY;
+            if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 0) stepNext();
+                else stepPrev();
             }
-            startAutoSlide();
-        }, { passive: true });
+            resumeAutoSlide();
+        };
 
-        testimonialsGrid.addEventListener('mouseenter', stopAutoSlide);
-        testimonialsGrid.addEventListener('mouseleave', startAutoSlide);
+        window.onresize = () => {
+            moveTo(carouselState.currentIndex, false);
+        };
 
-        window.addEventListener('resize', () => updateCarousel(false));
-
-        updateCarousel(false);
+        moveTo(0, false);
         startAutoSlide();
     }
+
+    async function loadTestimonials() {
+        if (!testimonialsGrid) return;
+
+        let loaded = false;
+        try {
+            const cached = localStorage.getItem('hs_cached_testimonials');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    currentTestimonials = parsed;
+                    initInfiniteCarousel(parsed);
+                    loaded = true;
+                }
+            }
+        } catch (e) {}
+
+        let freshData = null;
+        try {
+            const res = await fetch('data/testimonials.json?v=' + Date.now(), { cache: 'no-store' });
+            if (res.ok) {
+                freshData = await res.json();
+            }
+        } catch (err) {}
+
+        if (!freshData) {
+            try {
+                const fallbackRes = await fetch('https://raw.githubusercontent.com/Health-Streak/health-streak/main/data/testimonials.json?v=' + Date.now(), { cache: 'no-store' });
+                if (fallbackRes.ok) {
+                    freshData = await fallbackRes.json();
+                }
+            } catch (err) {}
+        }
+
+        if (Array.isArray(freshData) && freshData.length > 0) {
+            const freshJson = JSON.stringify(freshData);
+            const currentJson = JSON.stringify(currentTestimonials);
+            try {
+                localStorage.setItem('hs_cached_testimonials', freshJson);
+            } catch (e) {}
+
+            if (freshJson !== currentJson || !loaded) {
+                currentTestimonials = freshData;
+                initInfiniteCarousel(freshData);
+            }
+        } else if (!loaded) {
+            initInfiniteCarousel([
+                {
+                    id: "2",
+                    name: "Rangaraj R",
+                    tag: "Parent of Client",
+                    rating: 5,
+                    text: "As a father, seeing my son reduce his weight from 77.3 kgs to 70.5 kgs while his SGPT, SGOT, and triglyceride levels all improved significantly was beyond satisfying. What I appreciated most was that it never felt extreme. Thank you, Dt. Drashti Zatakia, for guiding him so patiently."
+                },
+                {
+                    id: "1",
+                    name: "Vidula Karhadkar",
+                    tag: "Verified Client",
+                    rating: 5,
+                    text: "I had an excellent experience working with Drashti. From understanding my lifestyle, preferences, and health goals, her guidance was practical, easy to follow, and tailored specifically to me. Thanks to her expertise, I've seen real improvements in my energy levels, eating habits, and overall well-being."
+                },
+                {
+                    id: "3",
+                    name: "Parth Trivedi",
+                    tag: "Verified Client",
+                    rating: 5,
+                    text: "Full marks to Drashti's knowledge which she applies into the real world. She helped me get back in shape and overcome cholesterol levels and a pre-diabetic condition. I came down to 72kg from 87kg within 3 months, and have maintained it since. Give your health another shot — the best help you can get is from Drashti."
+                },
+                {
+                    id: "1793042365096",
+                    name: "Yathaarth Jaju",
+                    tag: "Verified Client",
+                    rating: 5,
+                    text: "Demo testimonial"
+                }
+            ]);
+        }
+    }
+
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'hs_cached_testimonials') {
+            loadTestimonials();
+        }
+    });
 
     loadTestimonials();
 
