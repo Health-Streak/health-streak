@@ -308,4 +308,194 @@ document.addEventListener('DOMContentLoaded', () => {
     
     revealElements.forEach(el => revealObserver.observe(el));
 
+    // --- 7. Dynamic Testimonials & Infinite Carousel ---
+    const testimonialsGrid = document.getElementById('testimonialsGrid');
+    const carouselControls = document.getElementById('carouselControls');
+    const prevBtn = document.getElementById('prevTestimonial');
+    const nextBtn = document.getElementById('nextTestimonial');
+    const dotsContainer = document.getElementById('carouselDots');
+
+    function renderStars(rating) {
+        const count = Math.max(1, Math.min(5, parseInt(rating, 10) || 5));
+        return '★'.repeat(count) + '☆'.repeat(5 - count);
+    }
+
+    function getInitials(name) {
+        if (!name) return 'HS';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+
+    function createTestimonialCard(item) {
+        const card = document.createElement('div');
+        card.className = 'testimonial-card scroll-reveal-bottom revealed';
+
+        const avatarContent = item.image
+            ? `<img src="${item.image}" alt="${item.name}" onerror="this.parentElement.textContent='${getInitials(item.name)}'">`
+            : getInitials(item.name);
+
+        card.innerHTML = `
+            <div class="testimonial-header">
+                <div class="author-avatar">${avatarContent}</div>
+                <div class="author-meta">
+                    <h4 class="author-name">${item.name}</h4>
+                    ${item.tag ? `<span class="author-tag">${item.tag}</span>` : ''}
+                </div>
+            </div>
+            <div class="testimonial-stars" aria-label="${item.rating || 5} out of 5 stars">${renderStars(item.rating || 5)}</div>
+            <p class="testimonial-text">"${item.text}"</p>
+        `;
+        return card;
+    }
+
+    async function loadTestimonials() {
+        if (!testimonialsGrid) return;
+        try {
+            const res = await fetch('data/testimonials.json?v=' + Date.now());
+            if (!res.ok) return;
+            const testimonials = await res.json();
+            if (!Array.isArray(testimonials) || testimonials.length === 0) return;
+
+            // Clear static cards and render dynamic
+            testimonialsGrid.innerHTML = '';
+            testimonials.forEach(item => {
+                testimonialsGrid.appendChild(createTestimonialCard(item));
+            });
+
+            // If 4 or more testimonials, activate smooth carousel with controls
+            if (testimonials.length > 3) {
+                initTestimonialCarousel(testimonials);
+            } else {
+                testimonialsGrid.classList.remove('is-carousel');
+                testimonialsGrid.style.transform = 'none';
+                if (carouselControls) carouselControls.style.display = 'none';
+            }
+        } catch (err) {
+            // Keep default static fallback cards
+        }
+    }
+
+    function initTestimonialCarousel(testimonials) {
+        if (!testimonialsGrid || !carouselControls) return;
+
+        testimonialsGrid.classList.add('is-carousel');
+        carouselControls.style.display = 'flex';
+
+        let currentIndex = 0;
+        let autoSlideTimer = null;
+
+        function getVisibleCardsCount() {
+            if (window.innerWidth <= 768) return 1;
+            if (window.innerWidth <= 1100) return 2;
+            return 3;
+        }
+
+        function updateCarousel(smooth = true) {
+            const visibleCount = getVisibleCardsCount();
+            const total = testimonials.length;
+            const maxIndex = Math.max(0, total - visibleCount);
+
+            if (currentIndex > maxIndex) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = maxIndex;
+
+            const cards = testimonialsGrid.querySelectorAll('.testimonial-card');
+            if (!cards.length) return;
+
+            const cardWidth = cards[0].offsetWidth;
+            const gap = 28;
+            const shift = currentIndex * (cardWidth + gap);
+
+            testimonialsGrid.style.transition = smooth ? 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)' : 'none';
+            testimonialsGrid.style.transform = `translateX(-${shift}px)`;
+
+            // Update dots
+            if (dotsContainer) {
+                dotsContainer.innerHTML = '';
+                const numPages = maxIndex + 1;
+                for (let i = 0; i < numPages; i++) {
+                    const dot = document.createElement('button');
+                    dot.className = 'carousel-dot' + (i === currentIndex ? ' active' : '');
+                    dot.setAttribute('aria-label', `Testimonial slide ${i + 1}`);
+                    dot.addEventListener('click', () => {
+                        currentIndex = i;
+                        updateCarousel();
+                        restartAutoSlide();
+                    });
+                    dotsContainer.appendChild(dot);
+                }
+            }
+        }
+
+        function startAutoSlide() {
+            stopAutoSlide();
+            autoSlideTimer = setInterval(() => {
+                const visibleCount = getVisibleCardsCount();
+                const maxIndex = Math.max(0, testimonials.length - visibleCount);
+                if (currentIndex >= maxIndex) {
+                    currentIndex = 0;
+                } else {
+                    currentIndex++;
+                }
+                updateCarousel();
+            }, 4500);
+        }
+
+        function stopAutoSlide() {
+            if (autoSlideTimer) clearInterval(autoSlideTimer);
+        }
+
+        function restartAutoSlide() {
+            stopAutoSlide();
+            startAutoSlide();
+        }
+
+        if (nextBtn) {
+            nextBtn.onclick = () => {
+                const visibleCount = getVisibleCardsCount();
+                const maxIndex = Math.max(0, testimonials.length - visibleCount);
+                currentIndex = (currentIndex >= maxIndex) ? 0 : currentIndex + 1;
+                updateCarousel();
+                restartAutoSlide();
+            };
+        }
+
+        if (prevBtn) {
+            prevBtn.onclick = () => {
+                const visibleCount = getVisibleCardsCount();
+                const maxIndex = Math.max(0, testimonials.length - visibleCount);
+                currentIndex = (currentIndex <= 0) ? maxIndex : currentIndex - 1;
+                updateCarousel();
+                restartAutoSlide();
+            };
+        }
+
+        // Mobile touch swipe
+        let touchStartX = 0;
+        testimonialsGrid.addEventListener('touchstart', e => {
+            touchStartX = e.touches[0].clientX;
+            stopAutoSlide();
+        }, { passive: true });
+
+        testimonialsGrid.addEventListener('touchend', e => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const diff = touchStartX - touchEndX;
+            if (Math.abs(diff) > 40) {
+                if (diff > 0 && nextBtn) nextBtn.click();
+                else if (diff < 0 && prevBtn) prevBtn.click();
+            }
+            startAutoSlide();
+        }, { passive: true });
+
+        testimonialsGrid.addEventListener('mouseenter', stopAutoSlide);
+        testimonialsGrid.addEventListener('mouseleave', startAutoSlide);
+
+        window.addEventListener('resize', () => updateCarousel(false));
+
+        updateCarousel(false);
+        startAutoSlide();
+    }
+
+    loadTestimonials();
+
 });
