@@ -1,18 +1,18 @@
 [
   {
-    "id": "1",
-    "name": "Vidula Karhadkar",
-    "tag": "Verified Client",
-    "rating": 5,
-    "text": "I had an excellent experience working with Drashti. From understanding my lifestyle, preferences, and health goals, her guidance was practical, easy to follow, and tailored specifically to me. Thanks to her expertise, I've seen real improvements in my energy levels, eating habits, and overall well-being.",
-    "image": ""
-  },
-  {
     "id": "2",
     "name": "Rangaraj R",
     "tag": "Parent of Client",
     "rating": 5,
     "text": "As a father, seeing my son reduce his weight from 77.3 kgs to 70.5 kgs while his SGPT, SGOT, and triglyceride levels all improved significantly was beyond satisfying. What I appreciated most was that it never felt extreme. Thank you, Dt. Drashti Zatakia, for guiding him so patiently.",
+    "image": ""
+  },
+  {
+    "id": "1",
+    "name": "Vidula Karhadkar",
+    "tag": "Verified Client",
+    "rating": 5,
+    "text": "I had an excellent experience working with Drashti. From understanding my lifestyle, preferences, and health goals, her guidance was practical, easy to follow, and tailored specifically to me. Thanks to her expertise, I've seen real improvements in my energy levels, eating habits, and overall well-being.",
     "image": ""
   },
   {
