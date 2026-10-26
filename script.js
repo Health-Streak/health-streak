@@ -12,17 +12,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 2. Mobile Menu Toggle ---
     const mobileNavToggle = document.querySelector('.mobile-nav-toggle');
+    const mobileNavClose = document.querySelector('.mobile-nav-close');
     const mobileNavOverlay = document.querySelector('.mobile-nav-overlay');
     const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
 
     function toggleMobileMenu() {
-        mobileNavToggle.classList.toggle('active');
-        mobileNavOverlay.classList.toggle('active');
+        if (mobileNavToggle) mobileNavToggle.classList.toggle('active');
+        if (mobileNavOverlay) mobileNavOverlay.classList.toggle('active');
         document.body.classList.toggle('no-scroll');
     }
 
     if (mobileNavToggle) {
         mobileNavToggle.addEventListener('click', toggleMobileMenu);
+    }
+
+    if (mobileNavClose) {
+        mobileNavClose.addEventListener('click', toggleMobileMenu);
     }
 
     mobileNavLinks.forEach(link => {
@@ -284,8 +289,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 6. Scroll Appear Animations (Intersection Observer) ---
     const observerOptions = {
         root: null,
-        rootMargin: '0px 0px -15% 0px',
-        threshold: 0.1
+        rootMargin: '0px 0px -5% 0px',
+        threshold: 0.05
     };
 
     const revealObserver = new IntersectionObserver((entries, observer) => {
